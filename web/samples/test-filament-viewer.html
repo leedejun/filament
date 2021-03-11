@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Filament Viewer</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+  <link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+  <style>
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    h2 {
+      margin-top: 0
+    }
+
+    main {
+      height: 100%;
+      max-width: 800px;
+      background: #eee;
+      font-family: "Open Sans";
+      margin: auto;
+      padding: 10px;
+    }
+
+    filament-viewer {
+      height: 400px;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h2>Hello World</h2>
+    <p>
+      This is a demonstration of the <code>&lt;filament-viewer&gt;</code> web component.
+    </p>
+    <filament-viewer src="FlightHelmet.gltf" ibl="default_env/default_env_ibl.ktx" intensity="20000" />
+  </main>
+  <script src="http://unpkg.com/filament/filament.js"></script>
+  <script src="https://unpkg.com/gltumble"></script>
+  <script src="filament-viewer.js" type="module"></script>
+</body>
+
+</html>
