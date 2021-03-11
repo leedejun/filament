@@ -1,3 +1,20 @@
+/*
+* Copyright (C) 2021 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+// If you are bundling this with rollup, webpack, or esbuild, the following URL should be trimmed.
 import { LitElement, html, css } from "https://unpkg.com/lit-element?module";
 
 // To allow the DOM to render before the Filament WASM module is ready, we maintain a little
@@ -28,26 +45,31 @@ class FilamentTasks {
 //
 // MISSING FEATURES
 // ----------------
-// All of the following features are not implemented, but would be easy to add.
+// None of the following features are implemented. They would be easy to add.
+// - Add auto-fit of 3D model (migrate fitIntoUnitCube into gltfio::FilamentAsset)
+// - Use decorator-style properties
+// - Expose more animation properties (e.g. enable / disable, selected index)
+// - Allow more than one instance of the viewer on a page
+// - Support dynamic resize
 // - Expose camera properties and clear color
-// - Support for animation
-// - Support for GLB files
 // - Expose more IBL properties
 // - Expose directional light properties
 // - Allow clients to programatically change properties
 // - Allow disabling the tumble controls and add scroll-to-zoom
 // - Optional turntable animation
+// - Fix the import at the top of the file to support webpack / rollup / esbuild
 //
 class FilamentViewer extends LitElement {
     constructor() {
         super();
+        if (FilamentViewer.count++ > 0) throw Error("Only one instance of FilamentViewer is allowed.");
         this.filamentTasks = new FilamentTasks();
         this.canvasId = "filament-viewer-canvas";
-        this.src = "";          // Path to glTF file. (required)
-        this.alt = "";          // Alternate canvas content.
-        this.ibl = "";          // Path to image based light ktx.
-        this.sky = "";          // Path to skybox ktx.
-        this.intensity = 30000; // Intensity of the image based light.
+        this.src = null;          // Path to glTF file. (required)
+        this.alt = null;          // Alternate canvas content.
+        this.ibl = null;          // Path to image based light ktx.
+        this.sky = null;          // Path to skybox ktx.
+        this.intensity = 30000;   // Intensity of the image based light.
     }
 
     static get properties() {
@@ -143,12 +165,14 @@ class FilamentViewer extends LitElement {
     }
 
     _loadIbl() {
+        if (!this.ibl) {
+            return;
+        }
         if (this.indirectLight) {
             console.info("FilamentViewer does not allow the IBL to be changed.");
             return;
         }
         fetch(this.ibl).then(response => {
-            if (!response.ok)  throw new Error(this.ibl);
             return response.arrayBuffer();
         }).then(arrayBuffer => {
             const ktxData = new Uint8Array(arrayBuffer);
@@ -159,12 +183,14 @@ class FilamentViewer extends LitElement {
     }
 
     _loadSky() {
+        if (!this.sky) {
+            return;
+        }
         if (this.skybox) {
             console.info("FilamentViewer does not allow the skybox to be changed.");
             return;
         }
         fetch(this.sky).then(response => {
-            if (!response.ok)  throw new Error(this.sky);
             return response.arrayBuffer();
         }).then(arrayBuffer => {
             const ktxData = new Uint8Array(arrayBuffer);
@@ -179,11 +205,14 @@ class FilamentViewer extends LitElement {
             return;
         }
         fetch(this.src).then(response => {
-            if (!response.ok)  throw new Error(this.src);
             return response.arrayBuffer();
         }).then(arrayBuffer => {
-            const jsonData = new Uint8Array(arrayBuffer);
-            this.asset = this.loader.createAssetFromJson(jsonData);
+            const modelData = new Uint8Array(arrayBuffer);
+            if (this.src.endsWith(".glb")) {
+                this.asset = this.loader.createAssetFromBinary(modelData);
+            } else {
+                this.asset = this.loader.createAssetFromJson(modelData);
+            }
             this.assetRoot = this.asset.getRoot();
 
             // Enable shadows on every renderable after everything has been loaded.
@@ -196,15 +225,27 @@ class FilamentViewer extends LitElement {
                     instance.delete();
                 }
             });
+
+            this.animator = this.asset.getAnimator();
+            this.animationStartTime = Date.now();
         });
     }
 
     _updateAsset() {
+        // Invoke the first glTF animation if it exists.
+        if (this.animator.getAnimationCount() > 0) {
+            const ms = Date.now() - this.animationStartTime;
+            this.animator.applyAnimation(0, ms / 1000);
+            this.animator.updateBoneMatrices();
+        }
+
         // Tumble the model according to the trackball controller.
-        const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.assetRoot);
-        tcm.setTransform(inst, this.trackball.getMatrix());
-        inst.delete();
+        if (this.trackball) {
+            const tcm = this.engine.getTransformManager();
+            const inst = tcm.getInstance(this.assetRoot);
+            tcm.setTransform(inst, this.trackball.getMatrix());
+            inst.delete();
+        }
 
         // Add renderable entities to the scene as they become ready.
         while (true) {
@@ -234,5 +275,7 @@ class FilamentViewer extends LitElement {
         window.requestAnimationFrame(this._renderFrame.bind(this));
     }
 }
+
+FilamentViewer.count = 0;
 
 customElements.define("filament-viewer", FilamentViewer);

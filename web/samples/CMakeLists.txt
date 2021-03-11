@@ -112,6 +112,8 @@ add_rawfile("third_party/models/AnimatedTriangle/AnimatedTriangle.gltf" "Animate
 
 add_rawfile("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
 
+add_rawfile("third_party/models/CesiumMan/CesiumMan.glb" "CesiumMan.glb")
+
 # Convert OBJ files into filamesh files.
 function(add_mesh SOURCE TARGET)
     set(source_mesh "${ROOT_DIR}/${SOURCE}")
