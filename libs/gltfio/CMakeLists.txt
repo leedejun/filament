@@ -29,6 +29,7 @@ set(SRCS
         src/FilamentInstance.cpp
         src/GltfEnums.h
         src/MaterialProvider.cpp
+        src/MorphHelper.cpp
         src/ResourceLoader.cpp
         src/TangentsJob.h
         src/TangentsJob.cpp

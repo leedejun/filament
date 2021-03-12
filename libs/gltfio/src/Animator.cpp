@@ -18,6 +18,7 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
+#include "MorphHelper.h"
 #include "math.h"
 #include "upcast.h"
 
@@ -74,6 +75,8 @@ struct AnimatorImpl {
     FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
+    vector<float> weights;
+    MorphHelper* morpher;
 };
 
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
@@ -199,6 +202,7 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
+    mImpl->morpher = new MorphHelper(asset, instance);
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
@@ -257,6 +261,7 @@ void Animator::addInstance(FFilamentInstance* instance) {
 }
 
 Animator::~Animator() {
+    delete mImpl->morpher;
     delete mImpl;
 }
 
@@ -362,7 +367,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
             }
 
             case Channel::WEIGHTS: {
-                float4 weights(0, 0, 0, 0);
+                auto& weights = mImpl->weights;
                 const float* const samplerValues = sampler->values.data();
                 assert(sampler->values.size() % times.size() == 0);
                 const int valuesPerKeyframe = sampler->values.size() / times.size();
@@ -374,8 +379,8 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                     const float* const splineVerts = samplerValues + numMorphTargets;
                     const float* const outTangents = samplerValues + numMorphTargets * 2;
 
-                    const int numComponents = std::min((int) MAX_MORPH_TARGETS, numMorphTargets);
-                    for (int comp = 0; comp < numComponents; ++comp) {
+                    weights.resize(numMorphTargets);
+                    for (int comp = 0; comp < numMorphTargets; ++comp) {
                         float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
                         float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
                         float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
@@ -383,16 +388,15 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                         weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
                     }
                 } else {
-                    const int numComponents = std::min((int) MAX_MORPH_TARGETS, valuesPerKeyframe);
-                    for (int comp = 0; comp < numComponents; ++comp) {
+                    weights.resize(valuesPerKeyframe);
+                    for (int comp = 0; comp < valuesPerKeyframe; ++comp) {
                         float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
                         float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
                         weights[comp] = (1 - t) * previous + t * current;
                     }
                 }
 
-                auto renderable = renderableManager->getInstance(channel.targetEntity);
-                renderableManager->setMorphWeights(renderable, weights);
+                mImpl->morpher->applyWeights(channel.targetEntity, weights.data(), weights.size());
                 continue;
             }
         }

@@ -509,12 +509,18 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, node->weights_count); ++i) {
             weights[i] = node->weights[i];
         }
+
+        // This only sets up for the initial morph weights; note that Animator can change the
+        // weights later. It can also change the VertexBuffer associated with this renderable,
+        // in order to achieve morphing with many targets.
         mRenderableManager.setMorphWeights(renderable, weights);
     }
 }
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
         const UvMap& uvmap, const char* name) {
+    outPrim->uvmap = uvmap;
+
     // Create a little lambda that appends to the asset's vertex buffer slots.
     auto slots = &mResult->mBufferSlots;
     auto addBufferSlot = [slots](BufferSlot entry) {
@@ -664,7 +670,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     cgltf_size targetsCount = inPrim->targets_count;
     if (targetsCount > MAX_MORPH_TARGETS) {
-        slog.w << "Too many morph targets in " << name << io::endl;
+        // slog.w << "Too many morph targets in " << name << io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
 

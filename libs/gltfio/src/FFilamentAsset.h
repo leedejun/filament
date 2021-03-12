@@ -82,10 +82,12 @@ struct TextureSlot {
 // of VertexBuffer and IndexBuffer objects. To achieve the sharing behavior, the loader maintains a
 // small cache. The cache keys are glTF mesh definitions and the cache entries are lists of
 // primitives, where a "primitive" is a reference to a Filament VertexBuffer and IndexBuffer.
+// This is similar to a glTF primitive, except that the material is not referenced here.
 struct Primitive {
     filament::VertexBuffer* vertices = nullptr;
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
+    UvMap uvmap;
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
