@@ -430,7 +430,7 @@ int main(int argc, char** argv) {
 
         // Load animation data then free the source hierarchy.
         app.asset->getAnimator();
-        app.asset->releaseSourceData();
+        // app.asset->releaseSourceData();
 
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
